@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import SafariServices
+
 
 class LoginViewController: UIViewController {
 
@@ -21,67 +23,33 @@ class LoginViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-      
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(true)
         
-        if let loggedIn = loginSave.string(forKey: "loggedIn") {
+        if loginSave.string(forKey: "loggedIn") != nil {
             self.performSegue(withIdentifier: "loginToMain", sender: self)
         } else {
             print("not logged in")
         }
+       
     }
     
     @IBAction func SignupButtonPressed(_ sender: Any) {
-        performSegue(withIdentifier: "loginToSignup", sender: self)
+        let vc = Constants.constants.loadSafariView("http://www.udacity.com")
+        present(vc, animated: true, completion: nil)
     }
 
     @IBAction func loginButtonPressed(_ sender: Any) {
         guard emailText.text != "" || passwordText.text != "" else {
-            loginAlert()
+            let vc = Constants.constants.showAlert("Email and password did not match.", nil, false)
+            present(vc, animated: true, completion: nil)
             return
         }
-        
-        getSessionID()
+        Networking.networking.getSessionID(email: emailText.text!, password: passwordText.text!)
         self.performSegue(withIdentifier: "loginToMain", sender: self)
         loginSave.set(true, forKey: "loggedIn")
-    }
-    
-    func loginAlert() {
-        let alert = UIAlertController(title: "Login Error", message: "Please enter an email and password", preferredStyle: .alert)
-        let action = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-        
-        alert.addAction(action)
-        
-        self.present(alert, animated: true, completion: nil)
-    }
-    
-    
-    func getSessionID() {
-        let methodParameters = [Udacity.UDACITYParameterKeys.udacity:[emailText.text, passwordText.text]]
-        let json = try? JSONSerialization.data(withJSONObject: methodParameters)
-        let urlString = URL(string: Udacity.UDACITY.BASEURL)
-        var request = URLRequest(url: urlString!)
-        request.httpMethod = "POST"
-        request.httpBody = json
-        
-        let task = URLSession.shared.dataTask(with: request) {(data, response, error) in
-        
-            if error == nil  {
-               Udacity.helper.parseData(data!)
-            
-            } else {
-                print("Error \(error?.localizedDescription)")
-                
-                
-            }
-        }
-        
-        task.resume()
-        
     }
     
 }

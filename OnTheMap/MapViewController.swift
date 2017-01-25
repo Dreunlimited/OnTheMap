@@ -10,75 +10,30 @@ import UIKit
 import MapKit
 import SafariServices
 
-
 class MapViewController: UIViewController, MKMapViewDelegate {
     
     @IBOutlet weak var mapView: MKMapView!
     let annotation = MKPointAnnotation()
     let viewText = MKPinAnnotationView()
-    
-    
-    
+    let loginSave = UserDefaults.standard
     var locations = StudentLocation()
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        getSudentLocations()
+        Networking.networking.getSudentLocations()
         mapView.delegate = self
         mapView.mapType = .standard
         mapView.addAnnotations(((UIApplication.shared.delegate as? AppDelegate)?.studentLocations)!)
+        
     }
     
-    func getSudentLocations() {
-        let urlString = Parse.PARSE.BASEURL
-        let url = URL(string: urlString)
-        var request = URLRequest(url: url!)
-        request.addValue(Parse.ParseParameterKeys.appId, forHTTPHeaderField: "X-Parse-Application-Id")
-        request.addValue(Parse.ParseParameterKeys.apiKey, forHTTPHeaderField: "X-Parse-REST-API-Key")
-        request.addValue("1", forHTTPHeaderField: "X-Parse-REST-Limit")
-        
-        let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
-            guard error == nil else {
-                print("fail")
-                return
-            }
-            self.parseData(data!)
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        DispatchQueue.main.async {
+            self.mapView.addAnnotations(((UIApplication.shared.delegate as? AppDelegate)?.studentLocations)!)
         }
-        task.resume()
-    }
-    
-    func parseData(_ jsonData:Data) {
-        guard let results = try? JSONSerialization.jsonObject(with: jsonData) as? [String:Any] else {
-            print("failed")
-            return
-        }
-        
-        for locationJson in (results?["results"] as? [[String: Any]])! {
-            if let sObj = locationJson as? [String:AnyObject]{
-                if let  firstName = sObj["firstName"] as? String,
-                    let _ = sObj["lastName"] as? String,
-                    let latitude = sObj["latitude"] as? NSNumber,
-                    let longitude = sObj["longitude"] as? NSNumber,
-                    let _ = sObj["mapString"] as? String,
-                    let mediaURL = sObj["mediaURL"] as? String,
-                    let _ = sObj["objectId"] as? String {
-                    
-                    locations = StudentLocation(name: firstName, type: mediaURL, lat: (latitude.doubleValue), long: (longitude.doubleValue))
-                    ((UIApplication.shared.delegate as? AppDelegate)?.studentLocations.append(locations))
-                    DispatchQueue.main.async {
-                        self.mapView.addAnnotations(((UIApplication.shared.delegate as? AppDelegate)?.studentLocations)!)
-                    }
-                    
-                }
-                
-            }
-            
-            
-        }
-        
-        
     }
     
     
@@ -86,8 +41,6 @@ class MapViewController: UIViewController, MKMapViewDelegate {
         
         if annotation is MKUserLocation {
             return nil
-            
-            
         }
         
         var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: "location") as? MKPinAnnotationView
@@ -109,9 +62,7 @@ class MapViewController: UIViewController, MKMapViewDelegate {
     }
     
     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
-        print("tapped")
-        
-        if let mediaURL = view.annotation as? StudentLocation,
+       if let mediaURL = view.annotation as? StudentLocation,
             let stringURL = mediaURL.mediaURL {
             
             if let url = URL(string: stringURL) {
@@ -119,17 +70,19 @@ class MapViewController: UIViewController, MKMapViewDelegate {
                     let vc = SFSafariViewController(url: url, entersReaderIfAvailable: true)
                     present(vc, animated: true, completion: nil)
                 } else {
-                    let newUrlString = "http://www.\(stringURL)"
+                    let newUrlString = "http://\(url)"
                     let newURL = URL(string: newUrlString)
                     let vc = SFSafariViewController(url: newURL!, entersReaderIfAvailable: true)
                     present(vc, animated: true, completion: nil)
                 }
                 
             } else {
-                print("failed")
+               let vc = Constants.constants.showAlert("Network failed", "Network error", true)
+               present(vc, animated: true, completion: nil)
             }
         }
     }
+    
     
     @IBAction func refreshButtonPressed(_ sender: Any) {
     }
@@ -137,8 +90,16 @@ class MapViewController: UIViewController, MKMapViewDelegate {
     
     @IBAction func pinButtonPressed(_ sender: Any) {
     }
+    
+    
     @IBAction func logoutButtonPressed(_ sender: Any) {
-        
+        Networking.networking.removeSession()
+        let storyBoard = UIStoryboard(name: "Main", bundle: nil)
+        let loginVC = storyBoard.instantiateViewController(withIdentifier: "login")
+        DispatchQueue.main.async {
+            self.present(loginVC, animated: true, completion: nil)
+            
+        }
         
     }
     
